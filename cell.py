@@ -13,8 +13,9 @@ class Cell:
         self.visited = False
         self.distance = float("inf")
         self.parent = None
-        self.f_score = 0
-        self.g_score = 0
+        self.g_score = float('inf')
+        self.h_score = 0
+        self.f_score = float('inf')
 
     def remove_wall(self, direction):
 
