@@ -1,5 +1,5 @@
 import pygame
-from config import NB_LIGNES, NB_COLONNES, C_MUR
+from config import C_MUR
 
 class Cell:
     def __init__(self, row, col):
@@ -11,7 +11,6 @@ class Cell:
                       "W" : True
                     }
         self.visited = False
-        self.distance = float("inf")
         self.parent = None
         self.g_score = float('inf')
         self.h_score = 0

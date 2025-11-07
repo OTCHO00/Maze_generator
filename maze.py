@@ -1,6 +1,7 @@
-import random
+import random, pygame
 from cell import Cell
 from collections import deque
+from config import C_CHEMIN, C_EXPLORE, C_A_EXPLORE
 
 class Maze:
     
@@ -13,6 +14,9 @@ class Maze:
         self.solved = False
         self.path = []
         self.maze = []
+        self.solving = False
+        self.open_set = []
+        self.closed_set = []
 
         for row in range(0, self.row):
             ligne = []
@@ -91,6 +95,7 @@ class Maze:
                 l.append(voisin)
 
             else: 
+                
                 l.pop()
 
         self.generated = True
@@ -118,52 +123,58 @@ class Maze:
             voisin_accessible.append(self.get_cell(cell.row, cell.col - 1))
 
         return voisin_accessible
-
-    def solve_astar(self):
+    
+    def start_solving(self):
         
-        open_set = []
+        self.solving = True
+
         depart = self.get_cell(self.start[0], self.start[1])
         arrive = self.get_cell(self.end[0], self.end[1])
-        depart.h_score = self.heuristic(depart, arrive)
+
         depart.g_score = 0
+        depart.h_score = self.heuristic(depart, arrive)
         depart.f_score = depart.g_score + depart.h_score
-        open_set.append(depart)
 
-        while len(open_set) != 0:
+        self.open_set.append(depart)
 
-            current = min(open_set, key=lambda x: x.f_score)
-            open_set.remove(current)
+    def step_solve(self):
+        
+        if self.open_set == []:
+            
+            self.solving = False
+            return
 
-            if current == arrive:
+        arrive = self.get_cell(self.end[0], self.end[1])
 
-                self.path.append(current)
+        current = min(self.open_set, key=lambda x: x.f_score)
+        self.open_set.remove(current)
+        self.closed_set.append(current)
 
-                while current.parent != None: 
+        if current == arrive:
 
-                    self.path.append(current.parent)
-                    current = current.parent
+            self.path.append(current)
+
+            while current.parent != None: 
+
+                self.path.append(current.parent)
+                current = current.parent
                 
-                self.path.reverse()
-                self.solved = True
+            self.path.reverse()
+            self.solved = True
+            self.solving = False
+            return
+        
+        for voisin in self.get_accessible_neighbors(current):
+            tentative_g_score = current.g_score + 1
 
-                break
+            if tentative_g_score < voisin.g_score:
+                voisin.g_score = tentative_g_score
+                voisin.parent = current
+                voisin.h_score = self.heuristic(voisin, arrive)
+                voisin.f_score = voisin.g_score + voisin.h_score 
 
-            else:
-
-                for voisin in self.get_accessible_neighbors(current):
-                    tentative_g_score = current.g_score + 1
-
-                    if tentative_g_score < voisin.g_score:
-                        voisin.g_score = tentative_g_score
-                        voisin.parent = current
-                        voisin.h_score = self.heuristic(voisin, arrive)
-                        voisin.f_score = voisin.g_score + voisin.h_score 
-
-                        if voisin not in open_set:
-                            open_set.append(voisin)
-
-                
-
+                if voisin not in self.open_set:
+                    self.open_set.append(voisin)
 
     def draw(self, fenetre, cell_size):
         
@@ -171,3 +182,45 @@ class Maze:
             for col in range(0, self.col):
                 cell = self.get_cell(row, col)
                 cell.draw(fenetre, cell_size)
+        
+        for cell in self.closed_set:
+            pixel_x = cell.col * cell_size
+            pixel_y = cell.row * cell_size
+            
+            surface = pygame.Surface((cell_size, cell_size))
+            surface.set_alpha(100)  
+            surface.fill(C_EXPLORE)
+            fenetre.blit(surface, (pixel_x, pixel_y))
+        
+        for cell in self.open_set:
+            pixel_x = cell.col * cell_size
+            pixel_y = cell.row * cell_size
+            
+            surface = pygame.Surface((cell_size, cell_size))
+            surface.set_alpha(100)  
+            surface.fill(C_A_EXPLORE)
+            fenetre.blit(surface, (pixel_x, pixel_y))
+
+        if self.solved:
+            for i in range(len(self.path) - 1):
+                cell1 = self.path[i]
+                cell2 = self.path[i + 1]
+
+                centre1_x = cell1.col * cell_size + cell_size / 2 
+                centre1_y = cell1.row * cell_size + cell_size / 2 
+
+                centre2_x = cell2.col * cell_size + cell_size / 2 
+                centre2_y = cell2.row * cell_size + cell_size / 2 
+
+                pygame.draw.line(fenetre, C_CHEMIN, (centre1_x, centre1_y), (centre2_x, centre2_y), 5)
+        
+        depart = self.get_cell(self.start[0], self.start[1])
+        arrivee = self.get_cell(self.end[0], self.end[1])
+        
+        depart_x = depart.col * cell_size + cell_size // 2
+        depart_y = depart.row * cell_size + cell_size // 2
+        pygame.draw.circle(fenetre, (0, 255, 0), (depart_x, depart_y), cell_size // 3)
+        
+        arrivee_x = arrivee.col * cell_size + cell_size // 2
+        arrivee_y = arrivee.row * cell_size + cell_size // 2
+        pygame.draw.circle(fenetre, (255, 0, 0), (arrivee_x, arrivee_y), cell_size // 3)
